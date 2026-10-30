@@ -1,0 +1,30 @@
+# Go build outputs
+/bin/
+*.exe
+*.test
+*.out
+
+# SQLite databases and local data
+*.db
+*.sqlite
+*.sqlite3
+/data/*
+!/data/.gitkeep
+
+# Temporary files
+*.tmp
+*.temp
+*.swp
+*.swo
+*~
+
+# IDE and editor files
+.idea/
+.vscode/
+*.sublime-workspace
+*.sublime-project
+
+# Local configuration and secrets
+.env
+.env.*
+!.env.example
