@@ -31,17 +31,25 @@ func run() error {
 	reservationRepository := reservation.NewSQLiteRepository(db)
 	equipmentRepository := inventory.NewRepository(db)
 	reservationService := reservation.NewService(reservationRepository, equipmentRepository)
-	handler := api.NewHandler(reservationService, equipmentRepository)
+	apiHandler := api.NewHandler(reservationService, equipmentRepository)
+
+	mux := http.NewServeMux()
+	mux.Handle("/api/", apiHandler)
+	mux.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("web/static"))))
+	mux.HandleFunc("GET /{$}", func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, "web/templates/index.html")
+	})
+	mux.HandleFunc("/", http.NotFound)
 
 	server := &http.Server{
 		Addr:              serverAddress,
-		Handler:           handler,
+		Handler:           mux,
 		ReadHeaderTimeout: 5 * time.Second,
 		ReadTimeout:       15 * time.Second,
 		WriteTimeout:      15 * time.Second,
 		IdleTimeout:       60 * time.Second,
 	}
-	log.Printf("API local escuchando en http://%s", serverAddress)
+	log.Printf("Aplicación local escuchando en http://localhost:8080 (127.0.0.1:8080)")
 	if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 		return err
 	}

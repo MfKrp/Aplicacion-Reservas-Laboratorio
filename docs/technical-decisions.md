@@ -2,75 +2,44 @@
 
 ## Confirmadas e implementadas
 
-- **Lenguaje:** Go 1.27.1.
-- **HTTP:** biblioteca estándar `net/http`, sin frameworks.
-- **Dirección:** `127.0.0.1:8080`; los timeouts del servidor limitan esperas de lectura y escritura.
+- **Lenguaje y HTTP:** Go 1.27.1 con `net/http`, sin frameworks.
+- **Dirección:** el servidor escucha en `127.0.0.1:8080`, accesible desde `http://localhost:8080`; usa timeouts de lectura y escritura.
 - **Persistencia:** SQLite mediante `database/sql` y `modernc.org/sqlite` v1.61.0.
-- **Arquitectura:** monolito modular; los handlers reciben interfaces de servicio e inventario y no dependen de SQLite.
-- **JSON de éxito:** envelope `{ "data": ... }`.
-- **JSON de error:** envelope `{ "error": { "code": "...", "message": "..." } }`.
-- **Tamaño máximo del cuerpo:** 1 MiB.
-- **Solicitudes POST:** requieren `Content-Type: application/json`, rechazan campos desconocidos y aceptan exactamente un valor JSON.
-- **Rutas no admitidas y métodos incorrectos:** responden JSON; los métodos incorrectos incluyen `Allow`.
-- **Errores internos:** el cliente recibe un mensaje genérico HTTP 500; el detalle se registra localmente y no se devuelve información de SQLite.
+- **Interfaz:** HTML5, CSS3 y JavaScript nativo; no se agregan frameworks ni dependencias externas.
+- **Archivos estáticos:** `GET /` sirve `web/templates/index.html`; `/static/` se resuelve con `http.FileServer(http.Dir("web/static"))`.
+- **Comunicación web/API:** Fetch API y rutas relativas `/api/...`, por lo que navegador y API comparten origen y no requieren CORS.
+- **Dependencias:** handlers reciben interfaces del servicio y del inventario; no tienen acceso directo a SQLite.
+- **Diseño:** tres secciones (inventario, nueva reserva e historial), diseño adaptable, botones de aceptación en `#8D15ED` y sin animaciones ni recursos externos.
+- **Fechas de formulario:** el navegador recibe fecha/hora local; JavaScript las convierte a ISO/RFC3339 UTC antes de consultar disponibilidad o crear reservas.
+- **Respuestas API:** envelope `{ "data": ... }` en éxito y `{ "error": { "code": "...", "message": "..." } }` en error.
+- **Seguridad de contenido:** datos de inventario e historial se insertan usando `textContent`, no HTML construido con datos de usuario.
 
-## Endpoints y respuestas HTTP
+## Endpoints utilizados por la interfaz
 
-| Método y ruta | Resultado exitoso | Errores principales |
+| Método | Ruta | Función en la interfaz |
 |---|---|---|
-| `GET /api/equipment` | 200, lista de equipos | 500 |
-| `GET /api/equipment/{id}/availability` | 200, disponibilidad para el intervalo | 400, 404, 500 |
-| `POST /api/reservations` | 201, reserva creada | 400, 404, 409, 413, 415, 500 |
-| `GET /api/reservations` | 200, todas las reservas, incluidas las canceladas | 500 |
-| `GET /api/reservations/{id}` | 200, reserva encontrada | 400, 404, 500 |
-| `PATCH /api/reservations/{id}/cancel` | 200, reserva cancelada | 400, 404, 409, 500 |
+| GET | `/api/equipment` | Cargar inventario y opciones del formulario. |
+| GET | `/api/equipment/{id}/availability` | Consultar disponibilidad con `starts_at` y `ends_at`. |
+| POST | `/api/reservations` | Crear reserva con `equipment_id`, `requester`, `starts_at`, `ends_at`. |
+| GET | `/api/reservations` | Cargar historial, incluidas canceladas. |
+| PATCH | `/api/reservations/{id}/cancel` | Cancelar tras confirmación del usuario. |
 
-Códigos generales: **400** solicitud, JSON, query o ID inválidos; **404** ruta, equipo o reserva inexistentes; **405** método no permitido; **409** conflicto de horario o estado; **413** cuerpo mayor a 1 MiB; **415** tipo de contenido distinto de JSON; **500** error interno sanitizado.
+La API sigue siendo la autoridad final para validar reglas y conflictos.
 
-## Formatos JSON
+## Códigos HTTP
 
-Solicitud de creación:
+- **200:** consultas y cancelación correcta.
+- **201:** reserva creada.
+- **400:** solicitud, JSON, query o ID inválidos.
+- **404:** ruta, equipo o reserva inexistentes.
+- **405:** método no permitido.
+- **409:** conflicto de horario o estado.
+- **413:** cuerpo mayor a 1 MiB.
+- **415:** tipo de contenido distinto de JSON.
+- **500:** error interno sanitizado, sin detalles SQLite.
 
-```json
-{
-  "equipment_id": "MIC-01",
-  "requester": "Ana Pérez",
-  "starts_at": "2030-06-15T09:00:00-03:00",
-  "ends_at": "2030-06-15T11:00:00-03:00"
-}
-```
+## Pendientes de revisión
 
-Respuesta de éxito:
-
-```json
-{
-  "data": {
-    "id": 1,
-    "equipment_id": "MIC-01",
-    "requester": "Ana Pérez",
-    "starts_at": "2030-06-15T12:00:00Z",
-    "ends_at": "2030-06-15T14:00:00Z",
-    "status": "ACTIVE",
-    "created_at": "2026-10-31T12:00:00Z",
-    "cancelled_at": null
-  }
-}
-```
-
-Respuesta de error:
-
-```json
-{
-  "error": {
-    "code": "reservation_conflict",
-    "message": "equipment is already reserved for part of that interval"
-  }
-}
-```
-
-## Pendientes de revisión o definición
-
-- Revisar si el envelope y los nombres de campos cumplen el contrato deseado para futuras integraciones.
-- El formato RFC3339 de fechas sigue siendo la convención del dominio.
-- No hay autenticación; el servidor solo enlaza a loopback.
-- La interfaz web todavía no consume la API.
+- Revisar el aspecto visual y los textos con usuarios del laboratorio.
+- Confirmar si la selección local de zona horaria y la visualización en hora local son adecuadas para los equipos de uso.
+- La interfaz no incorpora autenticación; el servidor solo enlaza a loopback.

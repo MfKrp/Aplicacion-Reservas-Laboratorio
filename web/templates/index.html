@@ -3,10 +3,109 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#8D15ED">
   <title>Reservas de laboratorio</title>
+  <link rel="stylesheet" href="/static/css/styles.css">
+  <script src="/static/js/app.js" defer></script>
 </head>
 <body>
-  <h1>Sistema de reservas de laboratorio</h1>
-  <p>Proyecto en desarrollo.</p>
+  <header class="site-header">
+    <a class="brand" href="#inicio" aria-label="Reservas de laboratorio, inicio">
+      <span class="brand-mark" aria-hidden="true">L</span>
+      <span>Laboratorio<span class="brand-light"> / Reservas</span></span>
+    </a>
+    <div class="connection-state" id="connection-state" role="status">
+      <span class="connection-dot" aria-hidden="true"></span>
+      <span id="connection-label">Conectando con el servidor</span>
+    </div>
+  </header>
+
+  <main id="inicio" class="page-shell">
+    <section class="hero" aria-labelledby="page-title">
+      <div>
+        <p class="eyebrow">GESTIÓN DE EQUIPAMIENTO</p>
+        <h1 id="page-title">Reservas de laboratorio</h1>
+        <p class="hero-copy">Consultá equipos, verificá horarios y organizá el uso del laboratorio desde un solo lugar.</p>
+      </div>
+      <a class="button button-primary hero-action" href="#nueva-reserva">Nueva reserva <span aria-hidden="true">↓</span></a>
+    </section>
+
+    <section class="panel" id="inventario" aria-labelledby="inventory-title">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">EQUIPOS</p>
+          <h2 id="inventory-title">Inventario</h2>
+        </div>
+        <span class="count-badge" id="equipment-count">— equipos</span>
+      </div>
+      <div class="inventory-grid" id="equipment-list" aria-live="polite">
+        <p class="empty-state">Cargando inventario…</p>
+      </div>
+      <p class="inline-message" id="inventory-message" role="status" aria-live="polite"></p>
+    </section>
+
+    <section class="panel" id="nueva-reserva" aria-labelledby="reservation-title">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">PLANIFICACIÓN</p>
+          <h2 id="reservation-title">Nueva reserva</h2>
+        </div>
+      </div>
+      <div class="reservation-layout">
+        <form id="reservation-form" class="reservation-form">
+          <label for="equipment-id">Equipo <span class="required-mark">*</span></label>
+          <select id="equipment-id" name="equipment_id" required>
+            <option value="">Seleccioná un equipo</option>
+          </select>
+
+          <label for="requester">Nombre del solicitante <span class="required-mark">*</span></label>
+          <input id="requester" name="requester" type="text" maxlength="120" autocomplete="name" placeholder="Ej. Ana Pérez" required>
+
+          <div class="field-row">
+            <div>
+              <label for="starts-at">Inicio <span class="required-mark">*</span></label>
+              <input id="starts-at" name="starts_at" type="datetime-local" required>
+            </div>
+            <div>
+              <label for="ends-at">Finalización <span class="required-mark">*</span></label>
+              <input id="ends-at" name="ends_at" type="datetime-local" required>
+            </div>
+          </div>
+
+          <div class="form-actions">
+            <button class="button button-secondary" type="button" id="availability-button">Consultar disponibilidad</button>
+            <button class="button button-primary" type="submit" id="submit-reservation">Confirmar reserva</button>
+          </div>
+          <p class="form-message" id="form-message" role="status" aria-live="polite"></p>
+        </form>
+
+        <aside class="availability-card" aria-labelledby="availability-title">
+          <span class="availability-icon" aria-hidden="true">◷</span>
+          <h3 id="availability-title">Antes de reservar</h3>
+          <p>Consultá si el equipo está libre durante el intervalo seleccionado. La disponibilidad se confirma nuevamente al crear la reserva.</p>
+          <div class="availability-result" id="availability-result" role="status" aria-live="polite">Elegí equipo, inicio y finalización para consultar.</div>
+        </aside>
+      </div>
+    </section>
+
+    <section class="panel" id="historial" aria-labelledby="history-title">
+      <div class="section-heading history-heading">
+        <div>
+          <p class="eyebrow">ACTIVIDAD</p>
+          <h2 id="history-title">Historial de reservas</h2>
+        </div>
+        <button class="button button-quiet" type="button" id="refresh-button">Actualizar</button>
+      </div>
+      <div class="reservation-list" id="reservation-list" aria-live="polite">
+        <p class="empty-state">Cargando reservas…</p>
+      </div>
+      <p class="inline-message" id="history-message" role="status" aria-live="polite"></p>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <span>Sistema local de reservas de equipamiento</span>
+    <span>Uso interno del laboratorio</span>
+  </footer>
 </body>
 </html>

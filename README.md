@@ -1,8 +1,8 @@
 # Sistema de Reservas de Equipamiento de Laboratorio
 
-Sistema local de reservas de equipamiento de laboratorio en Go y SQLite. Cuenta con persistencia, lógica de reservas y una API REST local; la interfaz web todavía no está conectada.
+Sistema local de reservas de equipamiento de laboratorio en Go y SQLite. Incluye persistencia, lógica de reservas, una API REST y una interfaz web local.
 
-**Estado del proyecto:** Dominio, persistencia SQLite, API REST y verificador manual implementados. Interfaz web pendiente.
+**Estado del proyecto:** Dominio, persistencia SQLite, API REST e interfaz web implementados. Verificaciones automatizadas pendientes.
 
 ## 1. Especificación
 
@@ -89,7 +89,7 @@ El backend se ejecuta localmente y expone la API en loopback:
 
 `http://localhost:8080`
 
-El servidor HTTP ya está implementado y escucha únicamente en `127.0.0.1:8080`. La interfaz web todavía no está conectada. El proyecto no depende de servicios externos en ejecución.
+El servidor HTTP escucha únicamente en `127.0.0.1:8080`, sirve la interfaz web en `/` y atiende sus recursos desde `/static/`. El proyecto no depende de servicios externos en ejecución.
 
 ### 2.3. Organización del proyecto
 
@@ -130,15 +130,15 @@ reservation-system/
 - Dominio y servicio de reservas con validación, consulta de disponibilidad, prevención de superposiciones y cancelación con historial.
 - Verificador manual del dominio en `cmd/manual-check`, que recrea una base de datos independiente en cada ejecución.
 - API REST local con `net/http`, dependencias inyectadas y respuestas JSON centralizadas.
+- Interfaz adaptable en HTML, CSS y JavaScript nativo para inventario, disponibilidad, creación, historial y cancelación.
 
 **Pendiente:**
 
-- Interfaz web conectada al backend.
 - Pruebas automatizadas, previstas para una etapa posterior.
 
 ### 2.5. API REST
 
-El servidor escucha solo en `127.0.0.1:8080` y ofrece estas rutas:
+El servidor escucha solo en `127.0.0.1:8080`, sirve la interfaz en `/` y los archivos estáticos desde `/static/`, y ofrece estas rutas:
 
 | Método | Ruta | Uso |
 |---|---|---|
@@ -262,6 +262,6 @@ Los commits deberán representar cambios coherentes, identificables y revisables
 
 ## Estado actual
 
-El repositorio incluye persistencia SQLite, inventario, dominio de reservas, API REST local y un verificador manual con base independiente.
+El repositorio incluye persistencia SQLite, inventario, dominio de reservas, API REST local, interfaz web y verificador manual con base independiente.
 
-La interfaz web y las pruebas automatizadas siguen pendientes.
+Las pruebas automatizadas quedan para una etapa posterior.

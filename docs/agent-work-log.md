@@ -2,6 +2,18 @@
 
 Registrar cada delegación real y su revisión. No completar episodios ficticios.
 
+## Delegación — interfaz web
+
+- **Fecha:** 2026-10-31
+- **Objetivo:** implementar una interfaz local adaptable para inventario, creación de reservas, disponibilidad e historial/cancelación.
+- **Requerimiento relacionado:** Tarea «Desarrollar la interfaz web del sistema de reservas»; consumir endpoints existentes desde HTML, CSS y JavaScript nativo.
+- **Contexto suministrado:** API REST y reglas del servicio ya implementadas; no cambiar la lógica de negocio ni avanzar a nuevas funcionalidades.
+- **Instrucciones utilizadas:** usar Fetch API, servir HTML y estáticos desde `net/http`, mantener loopback, no agregar frameworks, dependencias, autenticación, Docker, pruebas automatizadas, commits ni push.
+- **Resultado generado:** interfaz en `web/`; montaje de `/` y `/static/` en `cmd/server`; documentación de arquitectura, decisiones y ejecución actualizada. `go build ./...` y `node --check web/static/js/app.js` pasaron; en una copia temporal, `/`, `/static/css/styles.css` y `/static/js/app.js` respondieron HTTP 200.
+- **Revisión humana:** Pendiente.
+- **Decisión adoptada:** Pendiente de revisión humana.
+- **Evidencia verificable:** `web/templates/index.html`, `web/static/css/styles.css`, `web/static/js/app.js`, `cmd/server/main.go`, `docs/architecture.md` y `docs/technical-decisions.md`; rutas verificadas en HTTP: `/` y ambos recursos estáticos con estado 200.
+
 ## Delegación — API REST
 
 - **Fecha:** 2026-10-31
