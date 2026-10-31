@@ -1,16 +1,15 @@
 # Arquitectura
 
-La aplicación se organizará como un monolito modular: un único programa local con módulos internos separados por responsabilidad. El backend se implementará en Go y se comunicará con el frontend mediante una API REST servida en `localhost:8080`.
+La aplicación se organiza como un monolito modular: un único programa local con módulos internos separados por responsabilidad. El backend está escrito en Go; la inicialización actual prepara la persistencia local. La API REST y la interfaz web quedan para etapas posteriores.
 
-## Componentes previstos
+## Componentes
 
-- `cmd/server`: inicialización del programa y, en una etapa posterior, arranque del servidor.
-- `internal/api`: endpoints HTTP y adaptación de solicitudes y respuestas.
-- `internal/reservation`: operaciones y reglas relacionadas con reservas.
-- `internal/inventory`: consulta y gestión del equipamiento.
-- `internal/storage`: persistencia local mediante SQLite.
-- `web/templates`: plantilla HTML de la interfaz.
-- `web/static`: estilos CSS y JavaScript del frontend.
-- `data`: ubicación para los archivos de datos locales.
+- `cmd/server`: punto de entrada. Inicializa SQLite al arrancar el programa.
+- `internal/storage`: crea el directorio y el archivo SQLite, prepara el esquema e inserta el catálogo inicial de forma idempotente.
+- `internal/inventory`: define el tipo `Equipment` y el catálogo inicial de equipamiento.
+- `internal/reservation`: reservado para operaciones y reglas de reservas futuras; no implementa creación ni cancelación.
+- `internal/api`: reservado para la futura API HTTP; todavía no contiene endpoints.
+- `web/templates` y `web/static`: estructura inicial de la futura interfaz.
+- `data`: almacena el archivo local `reservations.db`, creado automáticamente al iniciar el programa.
 
-Los módulos de `internal` encapsularán sus responsabilidades y evitarán que la interfaz acceda directamente a la persistencia. Esta descripción es una guía inicial; los límites e interfaces entre módulos se definirán durante el desarrollo.
+El módulo de almacenamiento depende del catálogo de inventario para cargar los equipos. La lógica de reservas no se mezcla con la inicialización ni el acceso a la base de datos.
