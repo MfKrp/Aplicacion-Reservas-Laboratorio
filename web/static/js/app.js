@@ -7,11 +7,17 @@ const elements = {
   equipmentList: document.querySelector('#equipment-list'),
   equipmentCount: document.querySelector('#equipment-count'),
   inventoryMessage: document.querySelector('#inventory-message'),
+  equipmentForm: document.querySelector('#equipment-form'),
+  newEquipmentID: document.querySelector('#new-equipment-id'),
+  newEquipmentName: document.querySelector('#new-equipment-name'),
+  submitEquipment: document.querySelector('#submit-equipment'),
+  equipmentFormMessage: document.querySelector('#equipment-form-message'),
   equipmentSelect: document.querySelector('#equipment-id'),
   reservationForm: document.querySelector('#reservation-form'),
   requester: document.querySelector('#requester'),
   startsAt: document.querySelector('#starts-at'),
   endsAt: document.querySelector('#ends-at'),
+  dateLimitNote: document.querySelector('#date-limit-note'),
   submitReservation: document.querySelector('#submit-reservation'),
   formMessage: document.querySelector('#form-message'),
   availabilityButton: document.querySelector('#availability-button'),
@@ -20,6 +26,25 @@ const elements = {
   historyMessage: document.querySelector('#history-message'),
   refreshButton: document.querySelector('#refresh-button'),
 };
+
+function maximumReservationDate(now = new Date()) {
+  const targetMonthIndex = now.getMonth() + 6;
+  const year = now.getFullYear() + Math.floor(targetMonthIndex / 12);
+  const month = targetMonthIndex % 12;
+  const day = Math.min(now.getDate(), new Date(year, month + 1, 0).getDate());
+  return new Date(year, month, day);
+}
+
+function dateKey(date) {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+}
+
+const maximumDate = maximumReservationDate();
+const maximumDateKey = dateKey(maximumDate);
+const maximumDateLabel = new Intl.DateTimeFormat('es-AR', { dateStyle: 'long' }).format(maximumDate);
+elements.startsAt.max = `${maximumDateKey}T23:59`;
+elements.endsAt.max = `${maximumDateKey}T23:59`;
+elements.dateLimitNote.textContent = `Podés reservar hasta el ${maximumDateLabel} inclusive.`;
 
 async function requestJSON(path, options = {}) {
   const response = await fetch(`${apiBase}${path}`, options);
@@ -180,8 +205,48 @@ function selectedInterval() {
   if (Number.isNaN(startsAt.getTime()) || Number.isNaN(endsAt.getTime())) {
     throw new Error('Ingresá fechas y horas válidas.');
   }
+  if (elements.startsAt.value.slice(0, 10) > maximumDateKey || elements.endsAt.value.slice(0, 10) > maximumDateKey) {
+    throw new Error(`Las fechas de inicio y finalización deben ser hasta el ${maximumDateLabel} inclusive.`);
+  }
   if (startsAt >= endsAt) throw new Error('El inicio debe ser anterior a la finalización.');
   return { startsAt: startsAt.toISOString(), endsAt: endsAt.toISOString() };
+}
+
+async function createEquipment(event) {
+  event.preventDefault();
+  setMessage(elements.equipmentFormMessage, '');
+  if (!elements.equipmentForm.reportValidity()) return;
+  const id = elements.newEquipmentID.value.trim();
+  const name = elements.newEquipmentName.value.trim();
+  if (!id || !name) {
+    setMessage(elements.equipmentFormMessage, 'Completá el identificador y el nombre del equipo.', 'error');
+    return;
+  }
+
+  elements.submitEquipment.disabled = true;
+  try {
+    const created = await requestJSON('/equipment', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id, name }),
+    });
+    const inventoryLoaded = await loadEquipment();
+    elements.equipmentForm.reset();
+    setMessage(
+      elements.equipmentFormMessage,
+      inventoryLoaded
+        ? `Equipo ${created.id} agregado correctamente.`
+        : `El equipo ${created.id} se registró, pero no se pudo actualizar la lista. Volvé a intentarlo con “Actualizar” más tarde.`,
+      inventoryLoaded ? 'success' : 'error',
+    );
+  } catch (error) {
+    const message = error.code === 'equipment_already_exists'
+      ? 'Ya existe un equipo con ese identificador.'
+      : error.message;
+    setMessage(elements.equipmentFormMessage, message, 'error');
+  } finally {
+    elements.submitEquipment.disabled = false;
+  }
 }
 
 async function checkAvailability() {
@@ -254,6 +319,7 @@ async function cancelReservation(id) {
 }
 
 elements.reservationForm.addEventListener('submit', createReservation);
+elements.equipmentForm.addEventListener('submit', createEquipment);
 elements.availabilityButton.addEventListener('click', checkAvailability);
 elements.refreshButton.addEventListener('click', refreshDashboard);
 void refreshDashboard();

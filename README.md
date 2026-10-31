@@ -2,7 +2,7 @@
 
 Sistema local de reservas de equipamiento de laboratorio en Go y SQLite. Incluye persistencia, lógica de reservas, una API REST y una interfaz web local.
 
-**Estado del proyecto:** Dominio, persistencia SQLite, API REST e interfaz web implementados. Verificaciones automatizadas pendientes.
+**Estado del proyecto:** Dominio, persistencia SQLite, API REST e interfaz web implementados. El inventario admite altas dinámicas y las reservas tienen un horizonte máximo de seis meses calendario. Las pruebas automatizadas quedan pendientes.
 
 ## 1. Especificación
 
@@ -21,10 +21,12 @@ Desarrollar una aplicación web local que permita administrar las reservas de eq
 El sistema deberá permitir:
 
 - Consultar el inventario precargado.
+- Agregar equipos al inventario persistente, sin duplicar identificadores.
 - Consultar la disponibilidad de una unidad durante un intervalo determinado.
 - Crear reservas indicando equipo, solicitante, fecha y horario.
 - Asignar un identificador único a cada reserva.
 - Validar los datos ingresados.
+- Limitar el inicio y el final de las reservas a seis meses calendario desde la fecha actual del servidor, inclusive.
 - Rechazar reservas que se superpongan con otras reservas activas de la misma unidad.
 - Permitir reservas consecutivas y reservas simultáneas de unidades diferentes.
 - Cancelar reservas sin eliminar sus registros.
@@ -53,13 +55,15 @@ Cada identificador representa una unidad física independiente.
 - Las unidades diferentes pueden reservarse simultáneamente.
 - Las reservas canceladas no bloquean la disponibilidad.
 - La cancelación conserva el identificador y los datos originales de la reserva.
+- El identificador y el nombre de un equipo son obligatorios; los espacios extremos se eliminan y el ID debe ser único.
+- El máximo de fecha se calcula dinámicamente; si el día equivalente no existe en el mes destino, se usa el último día de ese mes.
 
 ### 1.6. Fuera de alcance
 
 En la primera versión no se contempla:
 
 - Autenticación y gestión de usuarios reales.
-- Administración del inventario.
+- Eliminación física de equipos.
 - Notificaciones.
 - Pagos.
 - Integraciones con servicios externos.
@@ -131,6 +135,8 @@ reservation-system/
 - Verificador manual del dominio en `cmd/manual-check`, que recrea una base de datos independiente en cada ejecución.
 - API REST local con `net/http`, dependencias inyectadas y respuestas JSON centralizadas.
 - Interfaz adaptable en HTML, CSS y JavaScript nativo para inventario, disponibilidad, creación, historial y cancelación.
+- Alta de equipos desde la interfaz y persistencia en SQLite sin alterar los cinco registros iniciales.
+- Validación del máximo de seis meses calendario tanto en el servicio Go como en el formulario web.
 
 **Pendiente:**
 
@@ -143,6 +149,7 @@ El servidor escucha solo en `127.0.0.1:8080`, sirve la interfaz en `/` y los arc
 | Método | Ruta | Uso |
 |---|---|---|
 | GET | `/api/equipment` | Listar equipos. |
+| POST | `/api/equipment` | Crear equipo con `id` y `name`; devuelve 201, o 409 si el ID ya existe. |
 | GET | `/api/equipment/{id}/availability?starts_at=...&ends_at=...` | Consultar disponibilidad para un intervalo RFC3339. |
 | POST | `/api/reservations` | Crear una reserva. |
 | GET | `/api/reservations` | Listar reservas activas y canceladas. |
@@ -151,7 +158,9 @@ El servidor escucha solo en `127.0.0.1:8080`, sirve la interfaz en `/` y los arc
 
 El POST recibe `Content-Type: application/json` y un único objeto. Se rechazan campos desconocidos y cuerpos mayores a 1 MiB. Las respuestas exitosas usan `{"data": ...}`; los errores usan `{"error":{"code":"...","message":"..."}}`.
 
-Códigos principales: **200** para consultas y cancelación, **201** al crear, **400** para solicitudes inválidas, **404** para recursos inexistentes, **405** para métodos no permitidos, **409** para conflictos de reserva, **413** para cuerpos demasiado grandes, **415** para tipo de contenido incorrecto y **500** para errores internos sin detalles de SQLite.
+Códigos principales: **200** para consultas y cancelación, **201** al crear reservas o equipos, **400** para solicitudes inválidas (incluidas fechas que superen el horizonte), **404** para recursos inexistentes, **405** para métodos no permitidos, **409** para conflictos de reserva o ID de equipo duplicado, **413** para cuerpos demasiado grandes, **415** para tipo de contenido incorrecto y **500** para errores internos sin detalles de SQLite.
+
+El formulario calcula el máximo de fechas al cargar y limita ambos campos hasta ese día inclusive. El servicio recalcula el mismo límite usando la fecha local del servidor, de modo que la validación no depende del navegador.
 
 Ejemplo de solicitud para crear una reserva:
 
@@ -159,10 +168,20 @@ Ejemplo de solicitud para crear una reserva:
 {
   "equipment_id": "MIC-01",
   "requester": "Ana Pérez",
-  "starts_at": "2030-06-15T09:00:00-03:00",
-  "ends_at": "2030-06-15T11:00:00-03:00"
+  "starts_at": "2026-11-15T09:00:00-03:00",
+  "ends_at": "2026-11-15T11:00:00-03:00"
 }
 ```
+
+Para registrar un equipo desde PowerShell:
+
+```powershell
+$equipment = @{ id = "CAM-01"; name = "Cámara térmica" } | ConvertTo-Json
+Invoke-RestMethod -Method Post -Uri "http://127.0.0.1:8080/api/equipment" `
+  -ContentType "application/json" -Body $equipment
+```
+
+El equipo aparece en el inventario y en el selector de reservas tras la actualización. Para verificar persistencia, detener y volver a iniciar el servidor (`Ctrl+C`, luego `go run ./cmd/server`) y consultar `GET /api/equipment`; los cinco equipos iniciales y las altas se conservan en `data/reservations.db`.
 
 ### 2.6. Ejecución y verificación manual
 

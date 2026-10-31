@@ -55,4 +55,24 @@ func (r *Repository) GetByID(ctx context.Context, id string) (reservation.Equipm
 	return item, nil
 }
 
+// Create persists a new equipment record. The primary key makes duplicate
+// detection atomic, including concurrent create requests.
+func (r *Repository) Create(ctx context.Context, item reservation.Equipment) (reservation.Equipment, error) {
+	result, err := r.db.ExecContext(ctx, `
+		INSERT INTO equipment (id, name) VALUES (?, ?)
+		ON CONFLICT (id) DO NOTHING
+	`, item.ID, item.Name)
+	if err != nil {
+		return reservation.Equipment{}, fmt.Errorf("create equipment: %w", err)
+	}
+	inserted, err := result.RowsAffected()
+	if err != nil {
+		return reservation.Equipment{}, fmt.Errorf("check equipment insert: %w", err)
+	}
+	if inserted == 0 {
+		return reservation.Equipment{}, ErrAlreadyExists
+	}
+	return item, nil
+}
+
 var ErrNotFound = reservation.ErrEquipmentNotFound

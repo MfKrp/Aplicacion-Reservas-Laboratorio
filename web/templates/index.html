@@ -44,6 +44,18 @@
       <p class="inline-message" id="inventory-message" role="status" aria-live="polite"></p>
     </section>
 
+    <section class="panel" id="agregar-equipo" aria-labelledby="add-equipment-title">
+      <div class="section-heading">
+        <div><p class="eyebrow">INVENTARIO</p><h2 id="add-equipment-title">Agregar equipo</h2></div>
+      </div>
+      <form id="equipment-form" class="equipment-form">
+        <div><label for="new-equipment-id">Identificador <span class="required-mark">*</span></label><input id="new-equipment-id" name="id" type="text" maxlength="80" required></div>
+        <div><label for="new-equipment-name">Nombre del equipo <span class="required-mark">*</span></label><input id="new-equipment-name" name="name" type="text" maxlength="200" required></div>
+        <button class="button button-primary" type="submit" id="submit-equipment">Agregar equipo</button>
+      </form>
+      <p class="form-message" id="equipment-form-message" role="status" aria-live="polite"></p>
+    </section>
+
     <section class="panel" id="nueva-reserva" aria-labelledby="reservation-title">
       <div class="section-heading">
         <div>
@@ -71,6 +83,7 @@
               <input id="ends-at" name="ends_at" type="datetime-local" required>
             </div>
           </div>
+          <p class="date-limit-note" id="date-limit-note" role="status"></p>
 
           <div class="form-actions">
             <button class="button button-secondary" type="button" id="availability-button">Consultar disponibilidad</button>

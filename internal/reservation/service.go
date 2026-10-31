@@ -37,6 +37,9 @@ func (s *Service) Create(ctx context.Context, input CreateInput) (Reservation, e
 	if err != nil {
 		return Reservation{}, err
 	}
+	if err := validateReservationDateRange(startsAt, endsAt, time.Now()); err != nil {
+		return Reservation{}, err
+	}
 	if _, err := s.findEquipment(ctx, equipmentID); err != nil {
 		return Reservation{}, err
 	}
@@ -79,6 +82,9 @@ func (s *Service) IsAvailable(ctx context.Context, equipmentID, startsAtInput, e
 	if err != nil {
 		return false, err
 	}
+	if err := validateReservationDateRange(startsAt, endsAt, time.Now()); err != nil {
+		return false, err
+	}
 	if _, err := s.findEquipment(ctx, equipmentID); err != nil {
 		return false, err
 	}
@@ -115,4 +121,31 @@ func parseInterval(startsAtInput, endsAtInput string) (time.Time, time.Time, err
 		return time.Time{}, time.Time{}, fmt.Errorf("%w: start must be before end", ErrInvalidInput)
 	}
 	return startsAt, endsAt, nil
+}
+
+func validateReservationDateRange(startsAt, endsAt, now time.Time) error {
+	location := now.Location()
+	maximumDate := maximumReservationDate(now, 6)
+	if calendarDate(startsAt, location).After(maximumDate) || calendarDate(endsAt, location).After(maximumDate) {
+		return fmt.Errorf("%w: latest allowed date is %s", ErrDateBeyondLimit, maximumDate.Format("2006-01-02"))
+	}
+	return nil
+}
+
+func maximumReservationDate(now time.Time, months int) time.Time {
+	location := now.Location()
+	year, month, day := now.In(location).Date()
+	targetMonthIndex := int(month) - 1 + months
+	targetYear := year + targetMonthIndex/12
+	targetMonth := time.Month(targetMonthIndex%12 + 1)
+	lastDay := time.Date(targetYear, targetMonth+1, 0, 0, 0, 0, 0, location).Day()
+	if day > lastDay {
+		day = lastDay
+	}
+	return time.Date(targetYear, targetMonth, day, 0, 0, 0, 0, location)
+}
+
+func calendarDate(value time.Time, location *time.Location) time.Time {
+	year, month, day := value.In(location).Date()
+	return time.Date(year, month, day, 0, 0, 0, 0, location)
 }

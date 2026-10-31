@@ -41,6 +41,7 @@ type CreateInput struct {
 
 var (
 	ErrInvalidInput                = errors.New("invalid reservation input")
+	ErrDateBeyondLimit             = errors.New("reservation date exceeds the allowed range")
 	ErrEquipmentNotFound           = errors.New("equipment not found")
 	ErrReservationNotFound         = errors.New("reservation not found")
 	ErrReservationConflict         = errors.New("reservation overlaps an active reservation")

@@ -30,8 +30,9 @@ func run() error {
 
 	reservationRepository := reservation.NewSQLiteRepository(db)
 	equipmentRepository := inventory.NewRepository(db)
-	reservationService := reservation.NewService(reservationRepository, equipmentRepository)
-	apiHandler := api.NewHandler(reservationService, equipmentRepository)
+	equipmentService := inventory.NewService(equipmentRepository)
+	reservationService := reservation.NewService(reservationRepository, equipmentService)
+	apiHandler := api.NewHandler(reservationService, equipmentService)
 
 	mux := http.NewServeMux()
 	mux.Handle("/api/", apiHandler)

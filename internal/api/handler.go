@@ -13,6 +13,7 @@ import (
 	"strings"
 	"time"
 
+	"reservation-system/internal/inventory"
 	"reservation-system/internal/reservation"
 )
 
@@ -26,18 +27,19 @@ type ReservationService interface {
 	IsAvailable(ctx context.Context, equipmentID, startsAt, endsAt string) (bool, error)
 }
 
-type EquipmentLister interface {
+type EquipmentService interface {
 	List(ctx context.Context) ([]reservation.Equipment, error)
+	Create(ctx context.Context, id, name string) (reservation.Equipment, error)
 }
 
 type handler struct {
 	reservations ReservationService
-	equipment    EquipmentLister
+	equipment    EquipmentService
 }
 
 // NewHandler builds the API handler from service and inventory dependencies.
 // It does not access SQLite directly.
-func NewHandler(reservations ReservationService, equipment EquipmentLister) http.Handler {
+func NewHandler(reservations ReservationService, equipment EquipmentService) http.Handler {
 	return &handler{reservations: reservations, equipment: equipment}
 }
 
@@ -74,6 +76,11 @@ type createReservationRequest struct {
 	EndsAt      string `json:"ends_at"`
 }
 
+type createEquipmentRequest struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
+}
+
 type availabilityResponse struct {
 	EquipmentID string `json:"equipment_id"`
 	StartsAt    string `json:"starts_at"`
@@ -94,14 +101,17 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	switch r.URL.Path {
 	case "/api/equipment":
-		if r.Method != http.MethodGet {
-			h.methodNotAllowed(w, http.MethodGet)
-			return
+		switch r.Method {
+		case http.MethodGet:
+			if !h.requireNoBody(w, r) {
+				return
+			}
+			h.listEquipment(w, r)
+		case http.MethodPost:
+			h.createEquipment(w, r)
+		default:
+			h.methodNotAllowed(w, http.MethodGet, http.MethodPost)
 		}
-		if !h.requireNoBody(w, r) {
-			return
-		}
-		h.listEquipment(w, r)
 		return
 	case "/api/reservations":
 		switch r.Method {
@@ -167,6 +177,20 @@ func (h *handler) listEquipment(w http.ResponseWriter, r *http.Request) {
 		data = append(data, equipmentResponse{ID: item.ID, Name: item.Name})
 	}
 	h.writeJSON(w, http.StatusOK, envelope{Data: data})
+}
+
+func (h *handler) createEquipment(w http.ResponseWriter, r *http.Request) {
+	var input createEquipmentRequest
+	if err := decodeJSON(w, r, &input); err != nil {
+		h.writeError(w, err)
+		return
+	}
+	created, err := h.equipment.Create(r.Context(), input.ID, input.Name)
+	if err != nil {
+		h.writeError(w, err)
+		return
+	}
+	h.writeJSON(w, http.StatusCreated, envelope{Data: equipmentResponse{ID: created.ID, Name: created.Name}})
 }
 
 func (h *handler) equipmentAvailability(w http.ResponseWriter, r *http.Request, equipmentID string) {
@@ -358,9 +382,15 @@ func (h *handler) writeError(w http.ResponseWriter, err error) {
 	}
 
 	switch {
+	case errors.Is(err, inventory.ErrInvalidInput):
+		h.writeJSON(w, http.StatusBadRequest, envelope{Error: &errorDetail{Code: "invalid_equipment", Message: "equipment ID and name are required"}})
+	case errors.Is(err, inventory.ErrAlreadyExists):
+		h.writeJSON(w, http.StatusConflict, envelope{Error: &errorDetail{Code: "equipment_already_exists", Message: "an equipment item with that ID already exists"}})
 	case errors.Is(err, reservation.ErrInvalidInput):
 		message := strings.TrimSpace(strings.TrimPrefix(err.Error(), reservation.ErrInvalidInput.Error()+":"))
 		h.writeJSON(w, http.StatusBadRequest, envelope{Error: &errorDetail{Code: "invalid_request", Message: message}})
+	case errors.Is(err, reservation.ErrDateBeyondLimit):
+		h.writeJSON(w, http.StatusBadRequest, envelope{Error: &errorDetail{Code: "date_out_of_range", Message: "reservation dates exceed the allowed six-month range"}})
 	case errors.Is(err, reservation.ErrEquipmentNotFound):
 		h.writeJSON(w, http.StatusNotFound, envelope{Error: &errorDetail{Code: "equipment_not_found", Message: "equipment not found"}})
 	case errors.Is(err, reservation.ErrReservationNotFound):

@@ -127,6 +127,9 @@ h3 { margin-bottom: 7px; font-size: 16px; }
 
 .reservation-layout { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(245px, .75fr); gap: 30px; align-items: start; }
 .reservation-form { display: grid; gap: 9px; }
+.equipment-form { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.5fr) auto; align-items: end; gap: 14px; }
+.equipment-form > div { display: grid; gap: 9px; }
+.equipment-form .button { margin-bottom: 0; }
 label { margin-top: 5px; font-size: 13px; font-weight: 670; }
 .required-mark { color: var(--accent); }
 input, select {
@@ -143,6 +146,7 @@ input::placeholder { color: #a59baa; }
 .field-row > div { display: grid; gap: 9px; }
 .form-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 9px; }
 .form-message, .inline-message { min-height: 1.25em; margin: 0; color: var(--muted); font-size: 13px; }
+.date-limit-note { margin: 0; color: var(--muted); font-size: 12px; }
 .form-message.is-success { color: var(--success); }
 .form-message.is-error, .inline-message.is-error { color: var(--danger); }
 .availability-card { padding: 19px; border: 1px solid #eadbf8; border-radius: 13px; background: linear-gradient(145deg, #fbf7ff, #fff); }
@@ -183,6 +187,8 @@ input::placeholder { color: #a59baa; }
   .inventory-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; }
   .equipment-card { min-height: 100px; padding: 12px; }
   .reservation-layout { grid-template-columns: 1fr; gap: 22px; }
+  .equipment-form { grid-template-columns: 1fr; }
+  .equipment-form .button { width: 100%; }
   .field-row { grid-template-columns: 1fr; gap: 9px; }
   .field-row > div { gap: 9px; }
   .form-actions { flex-direction: column-reverse; }

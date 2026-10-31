@@ -2,6 +2,18 @@
 
 Registrar cada delegación real y su revisión. No completar episodios ficticios.
 
+## Delegación — horizonte de fechas y alta dinámica de equipos
+
+- **Fecha:** 2026-10-31
+- **Objetivo:** limitar reservas a seis meses calendario desde la fecha actual del servidor e incorporar equipos al inventario mediante la API y la interfaz.
+- **Requerimiento relacionado:** Tarea «Incorporar límites de fechas y gestión dinámica del inventario».
+- **Contexto suministrado:** sistema local Go/SQLite con API `net/http`, servicios de reservas e interfaz web ya implementados; conservar los cinco equipos iniciales, reservas y compatibilidad de la base actual.
+- **Instrucciones utilizadas:** validar el horizonte en el servicio y en el navegador; normalizar ID/nombre, exigirlos y rechazar duplicados; no cambiar esquema sin necesidad, no eliminar datos ni agregar frameworks, pruebas, Docker, commits o push.
+- **Resultado generado:** Se agregó el máximo inclusivo de seis meses calendario en el servicio de reservas, el servicio/repositorio/API para altas de equipos, la sección web y la documentación. `go build ./...`, `node --check web/static/js/app.js` y `git diff --check` pasaron. Una verificación HTTP en una copia temporal confirmó el alta y la normalización; el guion manual se interrumpió por una comprobación de PowerShell incorrecta antes de verificar duplicados, límite de fechas y reinicio. La base temporal se retiró tras detener el servidor.
+- **Revisión humana:** Pendiente.
+- **Decisión adoptada:** Pendiente de revisión humana.
+- **Evidencia verificable:** `internal/reservation/service.go`, `internal/inventory/service.go`, `internal/inventory/repository.go`, `internal/api/handler.go`, `web/templates/index.html`, `web/static/js/app.js`, `docs/architecture.md`, `docs/technical-decisions.md` y `README.md`; compilación y sintaxis indicadas arriba.
+
 ## Delegación — interfaz web
 
 - **Fecha:** 2026-10-31

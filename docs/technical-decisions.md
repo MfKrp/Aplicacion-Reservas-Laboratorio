@@ -13,12 +13,16 @@
 - **Fechas de formulario:** el navegador recibe fecha/hora local; JavaScript las convierte a ISO/RFC3339 UTC antes de consultar disponibilidad o crear reservas.
 - **Respuestas API:** envelope `{ "data": ... }` en éxito y `{ "error": { "code": "...", "message": "..." } }` en error.
 - **Seguridad de contenido:** datos de inventario e historial se insertan usando `textContent`, no HTML construido con datos de usuario.
+- **Límite temporal de reservas:** máximo inclusivo calculado desde la fecha actual del servidor más seis meses calendario. Cuando el mes destino no tiene el mismo día, se usa su último día (por ejemplo, 31 de octubre → 30 de abril). El servicio valida ambas fechas de cada intervalo; JavaScript refleja el límite con `max` y una validación previa para dar feedback inmediato. No se fija una fecha en código.
+- **Alta de equipos:** `POST /api/equipment` acepta `id` y `name`. El servicio recorta espacios extremos y rechaza campos vacíos. La clave primaria existente `equipment.id` sirve para evitar duplicados de forma atómica y preservar compatibilidad, sin cambios de esquema.
+- **Persistencia del inventario:** el endpoint escribe en la misma tabla SQLite que contiene los cinco equipos iniciales. El listado se consulta de nuevo tras el alta y al reiniciar, por lo que un equipo agregado se conserva; la inicialización continúa usando inserción idempotente y no reemplaza datos.
 
 ## Endpoints utilizados por la interfaz
 
 | Método | Ruta | Función en la interfaz |
 |---|---|---|
 | GET | `/api/equipment` | Cargar inventario y opciones del formulario. |
+| POST | `/api/equipment` | Registrar un equipo enviando `id` y `name`; normaliza espacios. |
 | GET | `/api/equipment/{id}/availability` | Consultar disponibilidad con `starts_at` y `ends_at`. |
 | POST | `/api/reservations` | Crear reserva con `equipment_id`, `requester`, `starts_at`, `ends_at`. |
 | GET | `/api/reservations` | Cargar historial, incluidas canceladas. |
@@ -30,10 +34,12 @@ La API sigue siendo la autoridad final para validar reglas y conflictos.
 
 - **200:** consultas y cancelación correcta.
 - **201:** reserva creada.
+- **201:** equipo creado.
 - **400:** solicitud, JSON, query o ID inválidos.
 - **404:** ruta, equipo o reserva inexistentes.
 - **405:** método no permitido.
 - **409:** conflicto de horario o estado.
+- **409:** identificador de equipo duplicado.
 - **413:** cuerpo mayor a 1 MiB.
 - **415:** tipo de contenido distinto de JSON.
 - **500:** error interno sanitizado, sin detalles SQLite.
@@ -42,4 +48,5 @@ La API sigue siendo la autoridad final para validar reglas y conflictos.
 
 - Revisar el aspecto visual y los textos con usuarios del laboratorio.
 - Confirmar si la selección local de zona horaria y la visualización en hora local son adecuadas para los equipos de uso.
+- Confirmar que la interpretación de “seis meses calendario” como ajuste al último día del mes destino coincide con la política del laboratorio.
 - La interfaz no incorpora autenticación; el servidor solo enlaza a loopback.
