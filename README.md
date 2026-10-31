@@ -1,8 +1,8 @@
 # Sistema de Reservas de Equipamiento de Laboratorio
 
-Proyecto de sistema local de reservas de equipamiento de laboratorio en Go y SQLite. Actualmente cuenta con persistencia y lógica de reservas; la API HTTP y la interfaz web todavía no están conectadas.
+Sistema local de reservas de equipamiento de laboratorio en Go y SQLite. Cuenta con persistencia, lógica de reservas y una API REST local; la interfaz web todavía no está conectada.
 
-**Estado del proyecto:** Dominio de reservas, persistencia SQLite y verificador manual implementados. API HTTP e interfaz web pendientes.
+**Estado del proyecto:** Dominio, persistencia SQLite, API REST y verificador manual implementados. Interfaz web pendiente.
 
 ## 1. Especificación
 
@@ -85,13 +85,11 @@ La aplicación estará compuesta por:
 
 ### 2.2. Funcionamiento
 
-El backend se ejecutará localmente y expondrá la aplicación mediante una dirección local:
+El backend se ejecuta localmente y expone la API en loopback:
 
 `http://localhost:8080`
 
-El usuario podrá acceder desde un navegador instalado en la misma computadora cuando se implemente el servidor HTTP.
-
-Actualmente `cmd/server` inicializa SQLite y muestra el estado de desarrollo; todavía no escucha en `localhost:8080`. El proyecto no depende de una conexión a Internet ni de servicios externos en ejecución.
+El servidor HTTP ya está implementado y escucha únicamente en `127.0.0.1:8080`. La interfaz web todavía no está conectada. El proyecto no depende de servicios externos en ejecución.
 
 ### 2.3. Organización del proyecto
 
@@ -102,7 +100,7 @@ reservation-system/
 │   ├── server/main.go
 │   └── manual-check/main.go
 ├── internal/
-│   ├── api/
+│   ├── api/handler.go
 │   ├── reservation/
 │   │   ├── model.go
 │   │   ├── repository.go
@@ -134,20 +132,20 @@ reservation-system/
 - Servicio con validaciones, consulta de disponibilidad y prevención de superposiciones activas.
 - Conservación del registro y fecha al cancelar una reserva.
 - Verificador manual directo del servicio en `cmd/manual-check`, con base independiente `data/manual-check.db` que se limpia en cada ejecución.
+- API REST local en `internal/api`, con seis endpoints JSON y respuestas de error centralizadas.
 
 **Pendiente:**
 
-- Servidor HTTP funcional y endpoints de la API REST.
 - Interfaz web conectada al backend.
 - Pruebas automatizadas, previstas para una etapa posterior.
 
-La compilación `go build ./...` se verificó correctamente. El verificador manual completó 10 comprobaciones con 0 fallidas.
-
-Para ejecutarlo desde PowerShell, en la raíz del repositorio:
+La API se inicia desde PowerShell, en la raíz del repositorio:
 
 ```powershell
-go run ./cmd/manual-check
+go run ./cmd/server
 ```
+
+El verificador manual del dominio sigue disponible con `go run ./cmd/manual-check`.
 
 ## 3. Preparación y utilización del agente
 
@@ -182,6 +180,7 @@ Esta sección conservará la evolución del proyecto y las decisiones tomadas du
 | Arquitectura | Monolito modular | Simplicidad y separación de responsabilidades. |
 | Interfaz | Web local | Acceso mediante navegador sin dependencia de Internet. |
 | Base de datos | SQLite con `modernc.org/sqlite` | Persistencia local sin servidor independiente; driver sin CGO. |
+| API | `net/http` estándar | Menos dependencias y escucha restringida a loopback. |
 | Comunicación | API REST | Separación entre frontend y backend. |
 | Frontend | HTML, CSS y JavaScript | Evitar frameworks innecesarios inicialmente. |
 
@@ -209,6 +208,6 @@ Los commits deberán representar cambios coherentes, identificables y revisables
 
 ## Estado actual
 
-El repositorio ya incluye la estructura modular, la persistencia SQLite, el inventario inicial y el dominio con la lógica de reservas. El comando `cmd/manual-check` permite repetir verificaciones manuales sobre una base separada.
+El repositorio incluye persistencia SQLite, inventario, dominio de reservas, API REST local y un verificador manual con base independiente.
 
-La API HTTP y la interfaz web siguen pendientes. Las pruebas automatizadas se incorporarán en una etapa posterior; no forman parte de la implementación actual.
+La interfaz web y las pruebas automatizadas siguen pendientes.
