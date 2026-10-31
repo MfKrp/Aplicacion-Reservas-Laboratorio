@@ -1,10 +1,9 @@
 package inventory
 
-// Equipment represents one physical item in the laboratory inventory.
-type Equipment struct {
-	ID   string
-	Name string
-}
+import "reservation-system/internal/reservation"
+
+// Equipment aliases the domain model so inventory and reservations share one type.
+type Equipment = reservation.Equipment
 
 // InitialEquipment returns the equipment catalog installed on first startup.
 func InitialEquipment() []Equipment {

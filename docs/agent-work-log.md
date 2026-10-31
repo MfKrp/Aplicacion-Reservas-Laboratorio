@@ -2,6 +2,18 @@
 
 Registrar cada delegación real y su revisión. No completar episodios ficticios.
 
+## Delegación — dominio y lógica de reservas
+
+- **Fecha:** 2026-10-31
+- **Objetivo:** implementar modelos, estados, repositorio SQLite y servicio para crear, consultar, cancelar y comprobar disponibilidad de reservas.
+- **Requerimiento relacionado:** Tarea «Implementar el dominio y la lógica de reservas»; validar equipo, solicitante e intervalo; impedir solapamientos activos sin impedir intervalos consecutivos ni reservas de otros equipos.
+- **Contexto suministrado:** proyecto Go modular con SQLite ya inicializada e inventario local persistido; no avanzar a la API HTTP o interfaz.
+- **Instrucciones utilizadas:** separar dominio, almacenamiento e inventario; usar modernc.org/sqlite ya incorporado; conservar historial al cancelar; no añadir pruebas automatizadas, dependencias innecesarias, commits ni push.
+- **Resultado generado:** modelos y estados en `internal/reservation/model.go`; repositorio y servicio; consulta de equipos; migración compatible de `requester`; documentación actualizada.
+- **Revisión humana:** Pendiente.
+- **Decisión adoptada:** Pendiente de revisión humana.
+- **Evidencia verificable:** `internal/reservation/`, `internal/inventory/repository.go`, `internal/storage/database.go`, `cmd/server/main.go`, `go.mod` y documentos actualizados.
+
 ## Delegación — inicialización de SQLite e inventario
 
 - **Fecha:** 2026-10-31

@@ -1,15 +1,17 @@
 # Arquitectura
 
-La aplicación se organiza como un monolito modular: un único programa local con módulos internos separados por responsabilidad. El backend está escrito en Go; la inicialización actual prepara la persistencia local. La API REST y la interfaz web quedan para etapas posteriores.
+La aplicación es un monolito modular Go. Los módulos separan modelos de dominio, reglas de reservas, consultas de inventario y persistencia SQLite. La futura API HTTP y la interfaz todavía no están implementadas.
 
 ## Componentes
 
-- `cmd/server`: punto de entrada. Inicializa SQLite al arrancar el programa.
-- `internal/storage`: crea el directorio y el archivo SQLite, prepara el esquema e inserta el catálogo inicial de forma idempotente.
-- `internal/inventory`: define el tipo `Equipment` y el catálogo inicial de equipamiento.
-- `internal/reservation`: reservado para operaciones y reglas de reservas futuras; no implementa creación ni cancelación.
-- `internal/api`: reservado para la futura API HTTP; todavía no contiene endpoints.
-- `web/templates` y `web/static`: estructura inicial de la futura interfaz.
-- `data`: almacena el archivo local `reservations.db`, creado automáticamente al iniciar el programa.
+- `cmd/server`: inicializa la base local; la composición del servicio con sus repositorios queda disponible para la siguiente integración.
+- `internal/reservation/model.go`: modelos `Equipment` y `Reservation`, estados y errores del dominio.
+- `internal/reservation/service.go`: validación de entradas y reglas de creación, consulta, disponibilidad y cancelación.
+- `internal/reservation/repository.go`: interfaz de persistencia y operaciones SQL de reservas. El alta comprueba superposiciones e inserta dentro de una transacción.
+- `internal/inventory/`: catálogo inicial y consultas SQL de equipos. El módulo expone el modelo `Equipment` del dominio.
+- `internal/storage/`: conexión y configuración de SQLite, esquema inicial y migración compatible de columnas.
+- `internal/api/`: reservado para endpoints HTTP futuros.
+- `web/`: reservado para la interfaz HTML, CSS y JavaScript.
+- `data/`: archivo SQLite local `reservations.db`.
 
-El módulo de almacenamiento depende del catálogo de inventario para cargar los equipos. La lógica de reservas no se mezcla con la inicialización ni el acceso a la base de datos.
+El servicio depende de interfaces de consulta y persistencia; no conoce detalles SQL. El repositorio no sustituye las validaciones del servicio, pero realiza en una sola transacción la comprobación de solapamiento y el insert para evitar que dos altas secuenciales dentro del proceso ocupen el mismo intervalo.
