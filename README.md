@@ -126,27 +126,81 @@ reservation-system/
 
 **Implementado:**
 
-- Inicialización de SQLite en `data/reservations.db`, creación del esquema e inventario inicial.
-- Dominio de reservas con estados `ACTIVE` y `CANCELLED`.
-- Repositorio SQLite para crear, listar, consultar y cancelar reservas.
-- Servicio con validaciones, consulta de disponibilidad y prevención de superposiciones activas.
-- Conservación del registro y fecha al cancelar una reserva.
-- Verificador manual directo del servicio en `cmd/manual-check`, con base independiente `data/manual-check.db` que se limpia en cada ejecución.
-- API REST local en `internal/api`, con seis endpoints JSON y respuestas de error centralizadas.
+- Inicialización de SQLite en `data/reservations.db` e inventario inicial.
+- Dominio y servicio de reservas con validación, consulta de disponibilidad, prevención de superposiciones y cancelación con historial.
+- Verificador manual del dominio en `cmd/manual-check`, que recrea una base de datos independiente en cada ejecución.
+- API REST local con `net/http`, dependencias inyectadas y respuestas JSON centralizadas.
 
 **Pendiente:**
 
 - Interfaz web conectada al backend.
 - Pruebas automatizadas, previstas para una etapa posterior.
 
-La API se inicia desde PowerShell, en la raíz del repositorio:
+### 2.5. API REST
+
+El servidor escucha solo en `127.0.0.1:8080` y ofrece estas rutas:
+
+| Método | Ruta | Uso |
+|---|---|---|
+| GET | `/api/equipment` | Listar equipos. |
+| GET | `/api/equipment/{id}/availability?starts_at=...&ends_at=...` | Consultar disponibilidad para un intervalo RFC3339. |
+| POST | `/api/reservations` | Crear una reserva. |
+| GET | `/api/reservations` | Listar reservas activas y canceladas. |
+| GET | `/api/reservations/{id}` | Consultar una reserva por ID. |
+| PATCH | `/api/reservations/{id}/cancel` | Cancelar una reserva conservando el historial. |
+
+El POST recibe `Content-Type: application/json` y un único objeto. Se rechazan campos desconocidos y cuerpos mayores a 1 MiB. Las respuestas exitosas usan `{"data": ...}`; los errores usan `{"error":{"code":"...","message":"..."}}`.
+
+Códigos principales: **200** para consultas y cancelación, **201** al crear, **400** para solicitudes inválidas, **404** para recursos inexistentes, **405** para métodos no permitidos, **409** para conflictos de reserva, **413** para cuerpos demasiado grandes, **415** para tipo de contenido incorrecto y **500** para errores internos sin detalles de SQLite.
+
+Ejemplo de solicitud para crear una reserva:
+
+```json
+{
+  "equipment_id": "MIC-01",
+  "requester": "Ana Pérez",
+  "starts_at": "2030-06-15T09:00:00-03:00",
+  "ends_at": "2030-06-15T11:00:00-03:00"
+}
+```
+
+### 2.6. Ejecución y verificación manual
+
+En una terminal de PowerShell, desde la raíz del repositorio, iniciar el servidor:
 
 ```powershell
 go run ./cmd/server
 ```
 
-El verificador manual del dominio sigue disponible con `go run ./cmd/manual-check`.
+En otra terminal, consultar el inventario y la disponibilidad, crear una reserva y luego consultarla y cancelarla:
 
+```powershell
+$base = "http://127.0.0.1:8080"
+Invoke-RestMethod "$base/api/equipment"
+
+$starts = [uri]::EscapeDataString("2030-06-15T09:00:00-03:00")
+$ends = [uri]::EscapeDataString("2030-06-15T11:00:00-03:00")
+Invoke-RestMethod "$base/api/equipment/MIC-01/availability?starts_at=$starts&ends_at=$ends"
+
+$body = @{
+  equipment_id = "MIC-01"
+  requester = "Ana Pérez"
+  starts_at = "2030-06-15T09:00:00-03:00"
+  ends_at = "2030-06-15T11:00:00-03:00"
+} | ConvertTo-Json
+
+$created = Invoke-RestMethod -Method Post `
+  -Uri "$base/api/reservations" `
+  -ContentType "application/json" `
+  -Body $body
+$id = $created.data.id
+
+Invoke-RestMethod "$base/api/reservations"
+Invoke-RestMethod "$base/api/reservations/$id"
+Invoke-RestMethod -Method Patch -Uri "$base/api/reservations/$id/cancel"
+```
+
+El verificador del dominio se ejecuta por separado con `go run ./cmd/manual-check` y utiliza `data/manual-check.db`, no la base principal.
 ## 3. Preparación y utilización del agente
 
 El desarrollo contará con un agente de programación que trabajará directamente sobre el repositorio.
