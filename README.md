@@ -277,6 +277,29 @@ Las decisiones y modificaciones significativas se conservarán mediante Git.
 
 Los commits deberán representar cambios coherentes, identificables y revisables.
 
+## Estado del proyecto y alcance
+
+Este repositorio contiene un MVP (Producto Mínimo Viable) funcional de un sistema local de reservas de equipamiento de laboratorio, desarrollado con fines académicos y de aprendizaje. Está diseñado para ejecutarse localmente y demostrar las funcionalidades principales de una aplicación de reservas, junto con la arquitectura modular y sus reglas de negocio.
+
+La implementación prioriza la simplicidad, la comprensión de la arquitectura y la demostración de las reglas de negocio. No fue diseñada ni validada para soportar cargas de producción y no debe considerarse un producto preparado para desplegarse en ese entorno.
+
+## Limitaciones y trabajo futuro
+
+Antes de considerar un despliegue productivo, podrían abordarse, entre otros, los siguientes aspectos:
+
+- Autenticación y autorización de usuarios.
+- Gestión de roles y permisos.
+- Registro estructurado de eventos y errores (logging).
+- Monitoreo y observabilidad.
+- Estrategias de respaldo y recuperación de la base de datos.
+- Manejo de concurrencia y transacciones bajo múltiples usuarios.
+- Escalabilidad y capacidad para soportar un mayor volumen de solicitudes.
+- Configuración segura del entorno y gestión de secretos.
+- Pruebas automatizadas más completas.
+- Despliegue, mantenimiento y actualización del sistema.
+
+Estos elementos son posibles líneas de evolución y no forman parte del alcance actual del MVP.
+
 ---
 
 ## Estado actual
