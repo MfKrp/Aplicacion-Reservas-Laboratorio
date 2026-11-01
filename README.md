@@ -1,309 +1,113 @@
 # Sistema de Reservas de Equipamiento de Laboratorio
 
-Sistema local de reservas de equipamiento de laboratorio en Go y SQLite. Incluye persistencia, lógica de reservas, una API REST y una interfaz web local.
+Aplicación web local para consultar equipos de laboratorio, comprobar su disponibilidad y gestionar reservas sin perder el historial de cancelaciones. El proyecto es un **MVP académico y funcional** desarrollado para demostrar un flujo de reservas, una arquitectura modular y reglas de negocio básicas.
 
-**Estado del proyecto:** Dominio, persistencia SQLite, API REST e interfaz web implementados. El inventario admite altas dinámicas y las reservas tienen un horizonte máximo de seis meses calendario. Las pruebas automatizadas quedan pendientes.
+## Objetivo y problema
 
-## 1. Especificación
+El sistema busca ayudar a organizar el uso de equipamiento compartido. Sin un registro común, las reservas pueden superponerse y el historial de cancelaciones puede perderse. La aplicación concentra el inventario y las reservas en una base SQLite local y ofrece acceso desde un navegador.
 
-### 1.1. Descripción del problema
+## Alcance funcional
 
-La coordinación de un laboratorio necesita gestionar las reservas de sus equipos de manera organizada, evitando conflictos de horarios y conservando el historial de operaciones.
+El MVP implementa:
 
-El sistema permitirá consultar la disponibilidad de cada unidad física, registrar nuevas reservas y cancelar reservas existentes sin perder sus datos históricos.
+- Consulta del inventario inicial y de los equipos agregados.
+- Incorporación de equipos con identificador único y nombre.
+- Consulta de disponibilidad por equipo e intervalo.
+- Creación, consulta y cancelación de reservas.
+- Conservación de reservas canceladas en el historial.
+- Persistencia en SQLite entre ejecuciones.
+- Validación de intervalos, existencia de equipos y superposiciones activas.
+- Permiso para reservas consecutivas y reservas simultáneas de equipos distintos.
+- Horizonte de reserva hasta seis meses calendario desde la fecha actual del servidor, inclusive.
+- Validación de nombres de solicitantes: letras Unicode y espacios; se rechazan números y símbolos.
+- Interfaz web local con autocompletado del final una hora después del inicio, que puede editarse.
 
-### 1.2. Objetivo
+El inventario precargado es MIC-01 y MIC-02 (microscopios digitales), OSC-01 (osciloscopio), MUL-01 (multímetro) y FUE-01 (fuente de alimentación).
 
-Desarrollar una aplicación web local que permita administrar las reservas de equipamiento de laboratorio, garantizando la integridad de los intervalos reservados y la persistencia de la información.
+La cancelación cambia el estado y registra una fecha, no elimina la fila. La regla de superposición solo toma en cuenta reservas `ACTIVE` del mismo equipo.
 
-### 1.3. Alcance funcional
+## Tecnologías
 
-El sistema deberá permitir:
-
-- Consultar el inventario precargado.
-- Agregar equipos al inventario persistente, sin duplicar identificadores.
-- Consultar la disponibilidad de una unidad durante un intervalo determinado.
-- Crear reservas indicando equipo, solicitante, fecha y horario.
-- Asignar un identificador único a cada reserva.
-- Validar los datos ingresados.
-- Limitar el inicio y el final de las reservas a seis meses calendario desde la fecha actual del servidor, inclusive.
-- Rechazar reservas que se superpongan con otras reservas activas de la misma unidad.
-- Permitir reservas consecutivas y reservas simultáneas de unidades diferentes.
-- Cancelar reservas sin eliminar sus registros.
-- Liberar los intervalos correspondientes a las reservas canceladas.
-- Persistir la información entre ejecuciones de la aplicación.
-
-### 1.4. Inventario inicial
-
-| Identificador | Equipo |
+| Área | Tecnología |
 |---|---|
-| MIC-01 | Microscopio digital |
-| MIC-02 | Microscopio digital |
-| OSC-01 | Osciloscopio |
-| MUL-01 | Multímetro |
-| FUE-01 | Fuente de alimentación |
+| Lenguaje y versión del módulo | Go 1.27.1 |
+| Servidor HTTP y API | `net/http` de Go, API REST con JSON |
+| Persistencia | SQLite mediante `database/sql` y `modernc.org/sqlite` v1.61.0 |
+| Interfaz | HTML5, CSS3 y JavaScript nativo con Fetch API |
+| Pruebas de negocio e integración | Paquete estándar `testing` y SQLite real en bases temporales |
 
-Cada identificador representa una unidad física independiente.
+La aplicación no requiere servicios externos para funcionar localmente.
 
-### 1.5. Reglas de negocio
+## Arquitectura
 
-- No se pueden reservar unidades inexistentes.
-- El solicitante no puede estar vacío ni contener únicamente espacios.
-- La fecha y hora de inicio deben ser anteriores a las de finalización.
-- Una unidad no puede tener dos reservas activas con intervalos superpuestos.
-- Se permiten reservas consecutivas.
-- Las unidades diferentes pueden reservarse simultáneamente.
-- Las reservas canceladas no bloquean la disponibilidad.
-- La cancelación conserva el identificador y los datos originales de la reserva.
-- El identificador y el nombre de un equipo son obligatorios; los espacios extremos se eliminan y el ID debe ser único.
-- El máximo de fecha se calcula dinámicamente; si el día equivalente no existe en el mes destino, se usa el último día de ese mes.
+El sistema es un monolito modular. El frontend llama a la API REST; los handlers traducen las solicitudes HTTP a llamadas a servicios; los servicios aplican las reglas del dominio; y los repositorios consultan o modifican SQLite. Los handlers no acceden directamente a la base de datos.
 
-### 1.6. Fuera de alcance
+| Ruta | Responsabilidad |
+|---|---|
+| `cmd/server` | Inicialización y arranque del servidor. |
+| `internal/api` | Rutas REST, decodificación JSON y respuestas HTTP. |
+| `internal/reservation` | Modelos, validaciones y reglas de reservas; repositorio SQLite. |
+| `internal/inventory` | Validación, consulta y registro de equipos. |
+| `internal/storage` | Conexión, esquema, migración compatible y carga del inventario inicial. |
+| `web/` | Página, estilos y lógica de interacción del navegador. |
 
-En la primera versión no se contempla:
+El flujo interno, la inicialización y los recorridos de las solicitudes se explican en [WORKFLOW.md](WORKFLOW.md). Las decisiones de arquitectura también están en [docs/architecture.md](docs/architecture.md) y [docs/technical-decisions.md](docs/technical-decisions.md).
 
-- Autenticación y gestión de usuarios reales.
-- Eliminación física de equipos.
-- Notificaciones.
-- Pagos.
-- Integraciones con servicios externos.
-- Interfaz gráfica compleja.
-- Despliegue en la nube.
-- Concurrencia distribuida.
-- Escalabilidad de producción.
+## API REST
 
-## 2. Solución técnica
+El servidor ofrece estas rutas locales:
 
-### 2.1. Arquitectura
-
-Se utilizará una arquitectura de monolito modular con separación de responsabilidades.
-
-La aplicación estará compuesta por:
-
-- Frontend web: HTML, CSS y JavaScript.
-- Backend: Go.
-- Servidor HTTP: paquete estándar `net/http`.
-- Comunicación: API REST utilizando JSON.
-- Persistencia: SQLite.
-- Acceso a datos: paquete `database/sql` con el driver `modernc.org/sqlite`.
-
-### 2.2. Funcionamiento
-
-El backend se ejecuta localmente y expone la API en loopback:
-
-`http://localhost:8080`
-
-El servidor HTTP escucha únicamente en `127.0.0.1:8080`, sirve la interfaz web en `/` y atiende sus recursos desde `/static/`. El proyecto no depende de servicios externos en ejecución.
-
-### 2.3. Organización del proyecto
-
-```text
-reservation-system/
-│
-├── cmd/
-│   ├── server/main.go
-│   └── manual-check/main.go
-├── internal/
-│   ├── api/handler.go
-│   ├── reservation/
-│   │   ├── model.go
-│   │   ├── repository.go
-│   │   └── service.go
-│   ├── inventory/
-│   │   ├── equipment.go
-│   │   └── repository.go
-│   └── storage/database.go
-├── web/
-│   ├── templates/
-│   └── static/
-│       ├── css/
-│       └── js/
-├── data/
-├── docs/
-├── .gitignore
-├── go.mod
-├── go.sum
-└── README.md
-```
-
-### 2.4. Estado de implementación
-
-**Implementado:**
-
-- Inicialización de SQLite en `data/reservations.db` e inventario inicial.
-- Dominio y servicio de reservas con validación, consulta de disponibilidad, prevención de superposiciones y cancelación con historial.
-- Verificador manual del dominio en `cmd/manual-check`, que recrea una base de datos independiente en cada ejecución.
-- API REST local con `net/http`, dependencias inyectadas y respuestas JSON centralizadas.
-- Interfaz adaptable en HTML, CSS y JavaScript nativo para inventario, disponibilidad, creación, historial y cancelación.
-- Alta de equipos desde la interfaz y persistencia en SQLite sin alterar los cinco registros iniciales.
-- Validación del máximo de seis meses calendario tanto en el servicio Go como en el formulario web.
-
-**Pendiente:**
-
-- Pruebas automatizadas, previstas para una etapa posterior.
-
-### 2.5. API REST
-
-El servidor escucha solo en `127.0.0.1:8080`, sirve la interfaz en `/` y los archivos estáticos desde `/static/`, y ofrece estas rutas:
-
-| Método | Ruta | Uso |
+| Método | Ruta | Propósito / entrada principal |
 |---|---|---|
-| GET | `/api/equipment` | Listar equipos. |
-| POST | `/api/equipment` | Crear equipo con `id` y `name`; devuelve 201, o 409 si el ID ya existe. |
-| GET | `/api/equipment/{id}/availability?starts_at=...&ends_at=...` | Consultar disponibilidad para un intervalo RFC3339. |
-| POST | `/api/reservations` | Crear una reserva. |
-| GET | `/api/reservations` | Listar reservas activas y canceladas. |
-| GET | `/api/reservations/{id}` | Consultar una reserva por ID. |
-| PATCH | `/api/reservations/{id}/cancel` | Cancelar una reserva conservando el historial. |
+| `GET` | `/api/equipment` | Lista de equipos. |
+| `POST` | `/api/equipment` | Agrega equipo; JSON `{ "id": "...", "name": "..." }`. |
+| `GET` | `/api/equipment/{id}/availability?starts_at=...&ends_at=...` | Consulta disponibilidad con fechas RFC3339. |
+| `POST` | `/api/reservations` | Crea una reserva; JSON con `equipment_id`, `requester`, `starts_at` y `ends_at`. |
+| `GET` | `/api/reservations` | Lista reservas activas y canceladas. |
+| `GET` | `/api/reservations/{id}` | Devuelve una reserva. |
+| `PATCH` | `/api/reservations/{id}/cancel` | Cancela una reserva activa y conserva su registro. |
 
-El POST recibe `Content-Type: application/json` y un único objeto. Se rechazan campos desconocidos y cuerpos mayores a 1 MiB. Las respuestas exitosas usan `{"data": ...}`; los errores usan `{"error":{"code":"...","message":"..."}}`.
+Las respuestas exitosas siguen el formato `{ "data": ... }`; los errores usan `{ "error": { "code": "...", "message": "..." } }`. La API valida JSON, limita los cuerpos y evita enviar detalles internos de SQLite al cliente. Más detalles del flujo y las respuestas están en [WORKFLOW.md](WORKFLOW.md).
 
-Códigos principales: **200** para consultas y cancelación, **201** al crear reservas o equipos, **400** para solicitudes inválidas (incluidas fechas que superen el horizonte), **404** para recursos inexistentes, **405** para métodos no permitidos, **409** para conflictos de reserva o ID de equipo duplicado, **413** para cuerpos demasiado grandes, **415** para tipo de contenido incorrecto y **500** para errores internos sin detalles de SQLite.
+## Requisitos y ejecución
 
-El formulario calcula el máximo de fechas al cargar y limita ambos campos hasta ese día inclusive. El servicio recalcula el mismo límite usando la fecha local del servidor, de modo que la validación no depende del navegador.
+- Go 1.27.1, de acuerdo con `go.mod`.
+- Ejecutar los comandos desde la raíz del repositorio, ya que la ruta de la base y los archivos web son relativas al directorio actual.
 
-Ejemplo de solicitud para crear una reserva:
-
-```json
-{
-  "equipment_id": "MIC-01",
-  "requester": "Ana Pérez",
-  "starts_at": "2026-11-15T09:00:00-03:00",
-  "ends_at": "2026-11-15T11:00:00-03:00"
-}
-```
-
-Para registrar un equipo desde PowerShell:
-
-```powershell
-$equipment = @{ id = "CAM-01"; name = "Cámara térmica" } | ConvertTo-Json
-Invoke-RestMethod -Method Post -Uri "http://127.0.0.1:8080/api/equipment" `
-  -ContentType "application/json" -Body $equipment
-```
-
-El equipo aparece en el inventario y en el selector de reservas tras la actualización. Para verificar persistencia, detener y volver a iniciar el servidor (`Ctrl+C`, luego `go run ./cmd/server`) y consultar `GET /api/equipment`; los cinco equipos iniciales y las altas se conservan en `data/reservations.db`.
-
-### 2.6. Ejecución y verificación manual
-
-En una terminal de PowerShell, desde la raíz del repositorio, iniciar el servidor:
+Iniciá el servidor:
 
 ```powershell
 go run ./cmd/server
 ```
 
-En otra terminal, consultar el inventario y la disponibilidad, crear una reserva y luego consultarla y cancelarla:
+Abrí [http://localhost:8080](http://localhost:8080). El servidor escucha en `127.0.0.1:8080`, crea `data/` y `data/reservations.db` cuando no existen, y carga los cinco equipos iniciales sin reemplazar los datos existentes. La interfaz se sirve desde `web/templates/index.html`; los recursos estáticos se publican bajo `/static/`.
 
-```powershell
-$base = "http://127.0.0.1:8080"
-Invoke-RestMethod "$base/api/equipment"
+La base local es información persistente del proyecto. No la borres si querés conservar equipos y reservas.
 
-$starts = [uri]::EscapeDataString("2030-06-15T09:00:00-03:00")
-$ends = [uri]::EscapeDataString("2030-06-15T11:00:00-03:00")
-Invoke-RestMethod "$base/api/equipment/MIC-01/availability?starts_at=$starts&ends_at=$ends"
+## Pruebas y verificaciones
 
-$body = @{
-  equipment_id = "MIC-01"
-  requester = "Ana Pérez"
-  starts_at = "2030-06-15T09:00:00-03:00"
-  ends_at = "2030-06-15T11:00:00-03:00"
-} | ConvertTo-Json
+El detalle de los escenarios, resultados, versiones y procedimientos está en [docs/testing.md](docs/testing.md).
 
-$created = Invoke-RestMethod -Method Post `
-  -Uri "$base/api/reservations" `
-  -ContentType "application/json" `
-  -Body $body
-$id = $created.data.id
+**Pruebas ejecutadas automáticamente:** las pruebas Go usan SQLite real en bases temporales y cubren creación, validaciones, nombres válidos e inválidos, superposiciones, intervalos consecutivos, cancelación y persistencia al cerrar y reabrir SQLite. En el último registro, `go test ./... -count=1` y `go test ./... -cover` finalizaron correctamente; la cobertura de `internal/reservation` fue 78,6 %. También se ejecutó `node --check web/static/js/app.js`; no hay una suite automatizada de JavaScript.
 
-Invoke-RestMethod "$base/api/reservations"
-Invoke-RestMethod "$base/api/reservations/$id"
-Invoke-RestMethod -Method Patch -Uri "$base/api/reservations/$id/cancel"
-```
+**Verificaciones manuales:** el usuario informó que creó dos reservas a nombre de dos personas, canceló ambas, reinició el servidor y comprobó que los registros y sus fechas de cancelación se conservaron. Codex no realizó esa verificación. La verificación del autocompletado de fecha en un navegador sigue pendiente; su procedimiento reproducible está en `docs/testing.md`.
 
-El verificador del dominio se ejecuta por separado con `go run ./cmd/manual-check` y utiliza `data/manual-check.db`, no la base principal.
-## 3. Preparación y utilización del agente
+## Estado del proyecto y limitaciones
 
-El desarrollo contará con un agente de programación que trabajará directamente sobre el repositorio.
+Este repositorio es un **MVP funcional con fines académicos y de aprendizaje**, diseñado para ejecución local. Prioriza la simplicidad y la comprensión de las reglas de negocio; no fue diseñado ni validado para cargas de producción.
 
-Se utilizará un entorno existente de asistencia a la programación, con acceso controlado a los archivos del proyecto.
+El proyecto sí implementa validaciones de entrada y de reglas de reserva, validación de solicitudes JSON, límite de tamaño del cuerpo y escucha en loopback. Estas medidas acotan el comportamiento de la aplicación, pero **no constituyen una estrategia integral de seguridad ni un endurecimiento suficiente para producción**.
 
-### 3.1. Criterios de utilización
-
-- Proporcionar instrucciones específicas para cada tarea.
-- Delegar funcionalidades acotadas y verificables.
-- Mantener las decisiones arquitectónicas documentadas.
-- Revisar los cambios generados antes de incorporarlos.
-- Ejecutar las verificaciones correspondientes a medida que avance el desarrollo.
-- Conservar evidencia de las interacciones y resultados relevantes.
-
-### 3.2. Registro del agente
-
-Los datos reales del entorno, modelo, versión, permisos e instrucciones utilizadas se documentarán a medida que se realicen las delegaciones.
-
-No se considerarán realizadas aquellas operaciones que todavía no hayan sido ejecutadas y verificadas.
-
-## 4. Registro de decisiones y delegación
-
-Esta sección conservará la evolución del proyecto y las decisiones tomadas durante el desarrollo.
-
-### 4.1. Decisiones iniciales
-
-| Decisión | Elección | Motivo |
-|---|---|---|
-| Lenguaje | Go | Desarrollo del backend y aprendizaje del lenguaje. |
-| Arquitectura | Monolito modular | Simplicidad y separación de responsabilidades. |
-| Interfaz | Web local | Acceso mediante navegador sin dependencia de Internet. |
-| Base de datos | SQLite con `modernc.org/sqlite` | Persistencia local sin servidor independiente; driver sin CGO. |
-| API | `net/http` estándar | Menos dependencias y escucha restringida a loopback. |
-| Comunicación | API REST | Separación entre frontend y backend. |
-| Frontend | HTML, CSS y JavaScript | Evitar frameworks innecesarios inicialmente. |
-
-### 4.2. Episodios de delegación
-
-Las delegaciones y sus resultados verificables se registran en `docs/agent-work-log.md`; la revisión humana queda indicada en cada ficha.
-
-Cada episodio incluirá:
-
-1. Objetivo y requisito.
-2. Contexto e instrucciones suministradas.
-3. Acción o resultado generado por el agente.
-4. Revisión y decisión humana.
-5. Evidencia verificable vinculada al repositorio.
-
-No se registrarán episodios ficticios ni resultados que no hayan sido comprobados.
-
-### 4.3. Evolución del proyecto
-
-Las decisiones y modificaciones significativas se conservarán mediante Git.
-
-Los commits deberán representar cambios coherentes, identificables y revisables.
-
-## Estado del proyecto y alcance
-
-Este repositorio contiene un MVP (Producto Mínimo Viable) funcional de un sistema local de reservas de equipamiento de laboratorio, desarrollado con fines académicos y de aprendizaje. Está diseñado para ejecutarse localmente y demostrar las funcionalidades principales de una aplicación de reservas, junto con la arquitectura modular y sus reglas de negocio.
-
-La implementación prioriza la simplicidad, la comprensión de la arquitectura y la demostración de las reglas de negocio. No fue diseñada ni validada para soportar cargas de producción y no debe considerarse un producto preparado para desplegarse en ese entorno.
-
-## Limitaciones y trabajo futuro
-
-Antes de considerar un despliegue productivo, podrían abordarse, entre otros, los siguientes aspectos:
+Antes de un despliegue productivo quedarían fuera del alcance actual, entre otros:
 
 - Autenticación y autorización de usuarios.
 - Gestión de roles y permisos.
-- Registro estructurado de eventos y errores (logging).
-- Monitoreo y observabilidad.
+- Protección y endurecimiento integral de endpoints.
+- Registro estructurado y monitoreo/observabilidad.
 - Estrategias de respaldo y recuperación de la base de datos.
-- Manejo de concurrencia y transacciones bajo múltiples usuarios.
-- Escalabilidad y capacidad para soportar un mayor volumen de solicitudes.
-- Configuración segura del entorno y gestión de secretos.
-- Pruebas automatizadas más completas.
-- Despliegue, mantenimiento y actualización del sistema.
+- Escalabilidad y pruebas de carga.
+- Manejo de concurrencia bajo condiciones de producción.
+- Configuración segura y gestión de secretos.
+- Despliegue, actualización y mantenimiento productivos.
 
-Estos elementos son posibles líneas de evolución y no forman parte del alcance actual del MVP.
-
----
-
-## Estado actual
-
-El repositorio incluye persistencia SQLite, inventario, dominio de reservas, API REST local, interfaz web y verificador manual con base independiente.
-
-Las pruebas automatizadas quedan para una etapa posterior.
+Estas son posibles líneas de evolución, no funcionalidades implementadas por este MVP. Para las limitaciones técnicas y decisiones vigentes, consultar también [docs/technical-decisions.md](docs/technical-decisions.md).

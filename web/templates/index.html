@@ -71,7 +71,8 @@
           </select>
 
           <label for="requester">Nombre del solicitante <span class="required-mark">*</span></label>
-          <input id="requester" name="requester" type="text" maxlength="120" autocomplete="name" placeholder="Ej. Ana Pérez" required>
+          <input id="requester" name="requester" type="text" maxlength="120" autocomplete="name" placeholder="Ej. Ana Pérez" pattern="[\p{L}\p{M} ]+" title="Usá solo letras y espacios." aria-describedby="requester-hint" required>
+          <small class="field-hint" id="requester-hint">Solo se permiten letras y espacios.</small>
 
           <div class="field-row">
             <div>

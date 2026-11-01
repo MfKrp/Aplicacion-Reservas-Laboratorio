@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strings"
 	"time"
+	"unicode"
 )
 
 // EquipmentReader lets the service validate equipment without depending on
@@ -32,6 +33,9 @@ func (s *Service) Create(ctx context.Context, input CreateInput) (Reservation, e
 	if requester == "" {
 		return Reservation{}, fmt.Errorf("%w: requester is required", ErrInvalidInput)
 	}
+	if !validRequesterName(input.Requester) {
+		return Reservation{}, fmt.Errorf("%w: requester may contain only letters and spaces", ErrInvalidInput)
+	}
 
 	startsAt, endsAt, err := parseInterval(input.StartsAt, input.EndsAt)
 	if err != nil {
@@ -53,6 +57,25 @@ func (s *Service) Create(ctx context.Context, input CreateInput) (Reservation, e
 		CreatedAt:   time.Now().UTC(),
 	}
 	return s.reservations.Create(ctx, item)
+}
+
+func validRequesterName(value string) bool {
+	hasLetter := false
+	previousWasLetterOrMark := false
+	for _, character := range value {
+		switch {
+		case unicode.IsLetter(character):
+			hasLetter = true
+			previousWasLetterOrMark = true
+		case unicode.IsMark(character) && previousWasLetterOrMark:
+			// Combining accents are valid only as part of a preceding letter.
+		case character == ' ':
+			previousWasLetterOrMark = false
+		default:
+			return false
+		}
+	}
+	return hasLetter
 }
 
 func (s *Service) List(ctx context.Context) ([]Reservation, error) {

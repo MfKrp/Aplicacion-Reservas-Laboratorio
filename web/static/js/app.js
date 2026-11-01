@@ -26,6 +26,9 @@ const elements = {
   historyMessage: document.querySelector('#history-message'),
   refreshButton: document.querySelector('#refresh-button'),
 };
+const requesterValidationMessage = 'Ingresá un nombre compuesto solo por letras y espacios.';
+const requesterFilteredMessage = 'Solo se permiten letras y espacios; se quitaron los caracteres no permitidos.';
+const endDateLimitMessage = 'La finalización supera la fecha máxima permitida. Elegí un inicio anterior o corregí el horario.';
 
 function maximumReservationDate(now = new Date()) {
   const targetMonthIndex = now.getMonth() + 6;
@@ -37,6 +40,69 @@ function maximumReservationDate(now = new Date()) {
 
 function dateKey(date) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+}
+
+function restrictRequesterCharacters() {
+  const input = elements.requester;
+  const original = input.value;
+  const caret = input.selectionStart ?? original.length;
+  const allowedCharacters = /[^\p{L}\p{M} ]/gu;
+  const filtered = original.replace(allowedCharacters, '');
+  if (filtered !== original) {
+    const filteredBeforeCaret = original.slice(0, caret).replace(allowedCharacters, '');
+    input.value = filtered;
+    input.setSelectionRange(filteredBeforeCaret.length, filteredBeforeCaret.length);
+  }
+  const valid = validateRequesterName();
+  if (filtered !== original) {
+    setMessage(elements.formMessage, requesterFilteredMessage, 'error');
+  } else if (!valid) {
+    setMessage(elements.formMessage, requesterValidationMessage, 'error');
+  } else if ([requesterFilteredMessage, requesterValidationMessage].includes(elements.formMessage.textContent)) {
+    setMessage(elements.formMessage, '');
+  }
+}
+
+function isValidRequesterName(value) {
+  return /\p{L}/u.test(value) && /^(?:\p{L}\p{M}*| )+$/u.test(value);
+}
+
+function validateRequesterName() {
+  const value = elements.requester.value;
+  const valid = value === '' || isValidRequesterName(value);
+  elements.requester.setCustomValidity(valid ? '' : requesterValidationMessage);
+  if (valid && elements.formMessage.textContent === requesterValidationMessage) {
+    setMessage(elements.formMessage, '');
+  }
+  return valid;
+}
+
+function formatLocalDateTime(date) {
+  const pad = (value) => String(value).padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
+function selectDefaultEndTime() {
+  if (!elements.startsAt.value) {
+    updateEndDateLimitValidity();
+    return;
+  }
+  const start = new Date(elements.startsAt.value);
+  if (Number.isNaN(start.getTime())) return;
+  const end = new Date(start.getTime() + 60 * 60 * 1000);
+  elements.endsAt.value = formatLocalDateTime(end);
+  updateEndDateLimitValidity();
+}
+
+function updateEndDateLimitValidity() {
+  const hasEndDateBeyondLimit = elements.endsAt.value
+    && elements.endsAt.value.slice(0, 10) > maximumDateKey;
+  elements.endsAt.setCustomValidity(hasEndDateBeyondLimit ? endDateLimitMessage : '');
+  if (hasEndDateBeyondLimit) {
+    setMessage(elements.formMessage, endDateLimitMessage, 'error');
+  } else if (elements.formMessage.textContent === endDateLimitMessage) {
+    setMessage(elements.formMessage, '');
+  }
 }
 
 const maximumDate = maximumReservationDate();
@@ -273,6 +339,10 @@ async function checkAvailability() {
 async function createReservation(event) {
   event.preventDefault();
   setMessage(elements.formMessage, '');
+  if (!validateRequesterName()) {
+    setMessage(elements.formMessage, requesterValidationMessage, 'error');
+  }
+  updateEndDateLimitValidity();
   if (!elements.reservationForm.reportValidity()) return;
 
   elements.submitReservation.disabled = true;
@@ -319,6 +389,11 @@ async function cancelReservation(id) {
 }
 
 elements.reservationForm.addEventListener('submit', createReservation);
+elements.requester.addEventListener('input', restrictRequesterCharacters);
+elements.startsAt.addEventListener('input', selectDefaultEndTime);
+elements.startsAt.addEventListener('change', selectDefaultEndTime);
+elements.endsAt.addEventListener('input', updateEndDateLimitValidity);
+elements.endsAt.addEventListener('change', updateEndDateLimitValidity);
 elements.equipmentForm.addEventListener('submit', createEquipment);
 elements.availabilityButton.addEventListener('click', checkAvailability);
 elements.refreshButton.addEventListener('click', refreshDashboard);
