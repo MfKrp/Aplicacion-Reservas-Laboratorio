@@ -71,16 +71,29 @@ Las respuestas exitosas siguen el formato `{ "data": ... }`; los errores usan `{
 
 ## Requisitos y ejecución
 
-- Go 1.27.1, de acuerdo con `go.mod`.
-- Ejecutar los comandos desde la raíz del repositorio, ya que la ruta de la base y los archivos web son relativas al directorio actual.
+- Go 1.27.1 o una versión compatible posterior, de acuerdo con la directiva de `go.mod`.
+- Git para clonar el repositorio.
+- No se requiere una base de datos preexistente ni configuración mediante variables de entorno.
 
-Iniciá el servidor:
+Cloná el repositorio y descargá las dependencias Go declaradas:
+
+```powershell
+git clone "<URL_DEL_REPOSITORIO>" Aplicacion-Reservas-Laboratorio
+Set-Location Aplicacion-Reservas-Laboratorio
+go mod download
+```
+
+Reemplazá `<URL_DEL_REPOSITORIO>` por la URL de clonación del repositorio.
+
+Desde la raíz del repositorio, iniciá el servidor:
 
 ```powershell
 go run ./cmd/server
 ```
 
-Abrí [http://localhost:8080](http://localhost:8080). El servidor escucha en `127.0.0.1:8080`, crea `data/` y `data/reservations.db` cuando no existen, y carga los cinco equipos iniciales sin reemplazar los datos existentes. La interfaz se sirve desde `web/templates/index.html`; los recursos estáticos se publican bajo `/static/`.
+Abrí [http://localhost:8080](http://localhost:8080). El servidor escucha en `127.0.0.1:8080`, crea `data/` y `data/reservations.db` automáticamente si no existen, crea el esquema e inserta el inventario inicial sin duplicar ni reemplazar equipos. El archivo de base de datos se excluye de Git, por lo que una clonación nueva no depende de la base de desarrollo. La interfaz se sirve desde `web/templates/index.html`; los recursos estáticos se publican bajo `/static/`.
+
+Para detenerlo, volvé a la terminal donde corre `go run` y presioná `Ctrl+C`.
 
 La base local es información persistente del proyecto. No la borres si querés conservar equipos y reservas.
 

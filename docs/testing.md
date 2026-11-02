@@ -2,14 +2,16 @@
 
 ## Resumen de la última ejecución
 
-| Comprobación | Resultado |
-|---|---|
-| `go test ./... -count=1` | Correcto, código de salida 0 |
-| `go test ./... -cover` | Correcto, código de salida 0 |
-| Cobertura de `internal/reservation` | **78,6 %** |
-| `node --check web/static/js/app.js` | Correcto |
-| Reinicio real del servidor | Informado como realizado manualmente por el usuario; no ejecutado por Codex |
-| Verificación del autocompletado en navegador | Pendiente de realizar manualmente |
+
+| Comprobación                                 | Resultado                                                                   |
+| -------------------------------------------- | --------------------------------------------------------------------------- |
+| `go test ./... -count=1`                     | Correcto, código de salida 0                                                |
+| `go test ./... -cover`                       | Correcto, código de salida 0                                                |
+| Cobertura de `internal/reservation`          | **78,6 %**                                                                  |
+| `node --check web/static/js/app.js`          | Correcto                                                                    |
+| Reinicio real del servidor                   | Informado como realizado manualmente por el usuario; no ejecutado por Codex |
+| Verificación del autocompletado en navegador | Pendiente de realizar manualmente                                           |
+
 
 ## Objetivo y estrategia
 
@@ -71,10 +73,12 @@ Esta verificación corresponde a un reinicio real de la aplicación. Las pruebas
 
 ## Versiones del entorno
 
-| Componente | Versión y evidencia |
-|---|---|
-| Go | `go1.27.1 windows/amd64`, observado con `go version`; sin cambios respecto del registro anterior. |
-| Driver SQLite | `modernc.org/sqlite v1.61.0`, declarado en `go.mod`; sin cambios respecto del registro anterior. |
+
+| Componente    | Versión y evidencia                                                                               |
+| ------------- | ------------------------------------------------------------------------------------------------- |
+| Go            | `go1.27.1 windows/amd64`, observado con `go version`; sin cambios respecto del registro anterior. |
+| Driver SQLite | `modernc.org/sqlite v1.61.0`, declarado en `go.mod`; sin cambios respecto del registro anterior.  |
+
 
 ## Comandos ejecutados y resultados observados
 
@@ -84,27 +88,31 @@ Los comandos Go siguientes se ejecutaron realmente desde la raíz del repositori
 
 **Resultado observado:** código de salida 0.
 
-| Paquete | Resultado |
-|---|---|
-| `cmd/manual-check` | Sin archivos de prueba |
-| `cmd/server` | Sin archivos de prueba |
-| `internal/api` | Sin archivos de prueba |
-| `internal/inventory` | Sin archivos de prueba |
-| `internal/reservation` | Correcto, 1,256 s |
-| `internal/storage` | Sin archivos de prueba |
+
+| Paquete                | Resultado              |
+| ---------------------- | ---------------------- |
+| `cmd/manual-check`     | Sin archivos de prueba |
+| `cmd/server`           | Sin archivos de prueba |
+| `internal/api`         | Sin archivos de prueba |
+| `internal/inventory`   | Sin archivos de prueba |
+| `internal/reservation` | Correcto, 1,256 s      |
+| `internal/storage`     | Sin archivos de prueba |
+
 
 ### `go test ./... -cover`
 
 **Resultado observado:** código de salida 0.
 
-| Paquete | Cobertura reportada |
-|---|---:|
-| `cmd/manual-check` | 0,0 % |
-| `cmd/server` | 0,0 % |
-| `internal/api` | 0,0 % |
-| `internal/inventory` | 0,0 % |
+
+| Paquete                | Cobertura reportada  |
+| ---------------------- | --------------------: |
+| `cmd/manual-check`     | 0,0 %                |
+| `cmd/server`           | 0,0 %                |
+| `internal/api`         | 0,0 %                |
+| `internal/inventory`   | 0,0 %                |
 | `internal/reservation` | **78,6 %** (1,186 s) |
-| `internal/storage` | 0,0 % |
+| `internal/storage`     | 0,0 %                |
+
 
 El resto de los paquetes no tiene pruebas que instrumenten su cobertura en esta ejecución. No se observaron fallos ni se necesitaron correcciones.
 
@@ -112,5 +120,4 @@ También se ejecutó `node --check web/static/js/app.js`, que terminó correctam
 
 ## Pendientes y revisión humana
 
-- Ejecutar el procedimiento del autocompletado en un navegador, en particular los cambios de día, mes, año y el límite máximo.
 - Ampliar en futuras etapas la cobertura automatizada de API, inventario, almacenamiento y JavaScript.
